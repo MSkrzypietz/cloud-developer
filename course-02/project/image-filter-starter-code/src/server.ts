@@ -13,11 +13,9 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
-  // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
+  // Filters an image from a public url
   // GET /filteredimage?image_url={{URL}}
-  // endpoint to filter an image from a public url.
   // IT SHOULD
-  //    1
   //    1. validate the image_url query
   //    2. call filterImageFromURL(image_url) to filter the image
   //    3. send the resulting file in the response
@@ -25,11 +23,32 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   // QUERY PARAMATERS
   //    image_url: URL of a publicly accessible image
   // RETURNS
-  //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
+  //   the filtered image file
+  app.get( "/filteredimage", async ( req, res ) => {
+    const imageURL: string = req.query.image_url;
+    if (!imageURL) {
+      return res.status(400).send({ message: 'Image URL is required' });
+    }
 
-  /**************************************************************************** */
+    let filteredPath: string;
+    try {
+      filteredPath = await filterImageFromURL(imageURL);      
+    } catch (err) {
+      return res.status(422).send({ message: 'Failed to filter the image. Image URL might be malformed' });
+    }
 
-  //! END @TODO1
+    res.sendFile(filteredPath, async (err: Error) => {
+      if (err) {
+        return res.status(500).send({ message: 'Failed to send the filtered image' });
+      }
+
+      try {
+        await deleteLocalFiles([ filteredPath ]);
+      } catch (err) {
+        return res.status(500).send({ message: 'Failed to cleanup the files on the local disk' });
+      }
+    });    
+  } );
   
   // Root Endpoint
   // Displays a simple message to the user
